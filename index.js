@@ -1,5 +1,5 @@
 import ParkingService from "./services/ParkingService.js";
-let numberOfEntryPoints = 4;
+let numberOfEntryPoints = 3;
 
 let parkingService = new ParkingService(numberOfEntryPoints);
 

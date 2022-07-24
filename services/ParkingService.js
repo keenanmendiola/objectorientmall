@@ -1,37 +1,25 @@
 import ParkingSlot from "../models/ParkingSlot.js";
-import {
-  parkingFees,
-  flatRate,
-  exceedingAllowedTimeFee,
-} from "../constants.js";
-let row1 = [
-  new ParkingSlot("S"),
-  new ParkingSlot("S"),
-  new ParkingSlot("M"),
-  new ParkingSlot("M"),
-  new ParkingSlot("L"),
-  new ParkingSlot("L"),
-];
+import { parkingFees, flatRate } from "../constants.js";
 
-let row2 = [
+let parking = [
+  new ParkingSlot("S"),
+  new ParkingSlot("S"),
+  new ParkingSlot("M"),
+  new ParkingSlot("M"),
+  new ParkingSlot("L"),
+  new ParkingSlot("L"),
   new ParkingSlot("M"),
   new ParkingSlot("M"),
   new ParkingSlot("L"),
   new ParkingSlot("L"),
   new ParkingSlot("S"),
   new ParkingSlot("S"),
-];
-
-let row3 = [
   new ParkingSlot("L"),
   new ParkingSlot("L"),
   new ParkingSlot("S"),
   new ParkingSlot("S"),
   new ParkingSlot("M"),
   new ParkingSlot("M"),
-];
-
-let row4 = [
   new ParkingSlot("L"),
   new ParkingSlot("L"),
   new ParkingSlot("M"),
@@ -40,7 +28,6 @@ let row4 = [
   new ParkingSlot("S"),
 ];
 
-let parking = [...row1, ...row2, ...row3, ...row4];
 let carsDeparted = [];
 
 export default class ParkingService {
@@ -50,17 +37,22 @@ export default class ParkingService {
 
   //sets random values for distances of each parking slot to an entry point
   initializeParking = (numberOfEntryPoints) => {
-    parking.forEach((slot) => {
-      let distanceToEntries = [];
-      for (var i = 1; i <= numberOfEntryPoints; i++) {
-        distanceToEntries.push(
-          Math.floor(Math.random() * numberOfEntryPoints) + 1
-        );
-      }
-      slot.distanceToEntries = distanceToEntries;
-    });
+    if (numberOfEntryPoints < 3) {
+      console.log("Parking complex must have at least 3 entry points");
+    } else {
+      parking.forEach((slot) => {
+        let distanceToEntries = [];
+        for (var i = 1; i <= numberOfEntryPoints; i++) {
+          distanceToEntries.push(
+            Math.floor(Math.random() * numberOfEntryPoints) + 1
+          );
+        }
+        slot.distanceToEntries = distanceToEntries;
+      });
+    }
   };
 
+  //parks car to nearest to its entry point
   parkCar = (entryPoint, carSize, plateNumber) => {
     const availableCarSlots = this.getAvailableCarSlots(entryPoint);
     this.assignCarToParkingSlot(
@@ -71,6 +63,7 @@ export default class ParkingService {
     );
   };
 
+  //unparks car and computes fee
   unparkCar = (plateNumber) => {
     let slotIndex = 0;
     let slot = parking.find((slot, index) => {
@@ -87,9 +80,13 @@ export default class ParkingService {
     //empty the parking slot
     parking[slotIndex].car = {};
     parking[slotIndex].isOccupied = false;
+    parking[slotIndex].parkedCarSize = "";
+    parking[slotIndex].plateNumber = "";
+    parking[slotIndex].entryPoint = "";
     console.table(carsDeparted);
   };
 
+  //computes parking fee
   computeParkingFee = (car, slotSize) => {
     let totalFee = flatRate;
     let chunkHours = 0;
@@ -116,6 +113,7 @@ export default class ParkingService {
     return totalFee;
   };
 
+  //computes parking fee based on slot
   computeFeeByParkingSlot = (hours, slotSize) => {
     let exceedingHoursFee = 0;
     switch (slotSize) {
@@ -135,6 +133,7 @@ export default class ParkingService {
     return exceedingHoursFee;
   };
 
+  //checks if car fits the parking slot
   doesCarFit = (carSize, slotSize) => {
     if (carSize === "S") {
       return true;
@@ -151,6 +150,7 @@ export default class ParkingService {
     return false;
   };
 
+  //gets available car slots for car currently entering
   getAvailableCarSlots = (entryPoint) => {
     return parking
       .filter((slot) => {
@@ -169,6 +169,7 @@ export default class ParkingService {
       });
   };
 
+  //checks if car is a returning car or new car then assigns parking slot accordingly
   assignCarToParkingSlot = (
     availableCarSlots,
     carSize,
@@ -178,7 +179,7 @@ export default class ParkingService {
     let departedCar = this.getPreviouslyParkedCarDetails(plateNumber);
 
     if (departedCar !== undefined) {
-      this.assignCarToSlot(availableCarSlots, departedCar, carSize);
+      this.assignCarToSlot(availableCarSlots, departedCar, carSize, entryPoint);
     } else {
       let car = {
         plateNumber,
@@ -191,6 +192,7 @@ export default class ParkingService {
     }
   };
 
+  //assigns car to parking slot
   assignCarToSlot = (availableCarSlots, car, carSize, entryPoint) => {
     for (let i = 0; i < availableCarSlots.length; i++) {
       let parkingSlotIndex = parking.findIndex(
@@ -204,6 +206,7 @@ export default class ParkingService {
           parking[parkingSlotIndex].car = car;
           parking[parkingSlotIndex].isOccupied = true;
 
+          //fields below are only added for easier visualization of list in console.table
           parking[parkingSlotIndex].parkedCarSize = carSize;
           parking[parkingSlotIndex].plateNumber = car.plateNumber;
           parking[parkingSlotIndex].entryPoint = entryPoint;
@@ -213,10 +216,12 @@ export default class ParkingService {
     }
   };
 
+  //get details of car if previously parked
   getPreviouslyParkedCarDetails = (plateNumber) => {
     return carsDeparted.find((car) => car.plateNumber === plateNumber);
   };
 
+  //displays list of parking slots
   viewParking = () => {
     console.table(parking);
   };
