@@ -88,6 +88,7 @@ export default class ParkingService {
 
   //computes parking fee
   computeParkingFee = (car, slotSize) => {
+    //TODO Add additional logic for computing fee if car left and came back;
     let totalFee = flatRate;
     let chunkHours = 0;
     let remainderChunkHours = 0;
@@ -98,6 +99,7 @@ export default class ParkingService {
       return totalFee;
     }
 
+    //TODO To clarify
     if (hours > 24) {
       chunkHours = Math.floor(hours / 24);
       remainderChunkHours = hours % 24;
