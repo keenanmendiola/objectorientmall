@@ -32,6 +32,7 @@ let carsDeparted = [];
 
 export default class ParkingService {
   constructor(numberOfEntryPoints) {
+    this.numberOfEntryPoints = numberOfEntryPoints;
     this.initializeParking(numberOfEntryPoints);
   }
 
@@ -54,7 +55,16 @@ export default class ParkingService {
 
   //parks car to nearest to its entry point
   parkCar = (entryPoint, carSize, plateNumber) => {
-    const availableCarSlots = this.getAvailableCarSlots(entryPoint);
+    if (entryPoint > this.numberOfEntryPoints) {
+      console.log("Invalid entry point.");
+      return;
+    }
+    const availableCarSlots = this.getAvailableCarSlots(entryPoint, carSize);
+
+    if (availableCarSlots.length === 0) {
+      console.log("No parking slots available.");
+      return;
+    }
     this.assignCarToParkingSlot(
       availableCarSlots,
       carSize,
@@ -72,18 +82,23 @@ export default class ParkingService {
       }
       return slot.car.plateNumber === plateNumber;
     });
-    slot.car.timeExit = new Date();
-    let fee = this.computeParkingFee(slot, slot.parkingType);
-    console.log("Car fee", fee);
-    carsDeparted.push(slot.car);
 
-    //empty the parking slot
-    parking[slotIndex].car = {};
-    parking[slotIndex].isOccupied = false;
-    parking[slotIndex].parkedCarSize = "";
-    parking[slotIndex].plateNumber = "";
-    parking[slotIndex].entryPoint = "";
-    console.table(carsDeparted);
+    if (slot !== undefined) {
+      slot.car.timeExit = new Date();
+      let fee = this.computeParkingFee(slot, slot.parkingType);
+      console.log("Car fee", fee);
+      carsDeparted.push(slot.car);
+
+      //empty the parking slot
+      parking[slotIndex].car = {};
+      parking[slotIndex].isOccupied = false;
+      parking[slotIndex].parkedCarSize = "";
+      parking[slotIndex].plateNumber = "";
+      parking[slotIndex].entryPoint = "";
+      console.table(carsDeparted);
+    } else {
+      console.log("Car not found");
+    }
   };
 
   //computes parking fee
@@ -93,7 +108,9 @@ export default class ParkingService {
     let chunkHours = 0;
     let remainderChunkHours = 0;
     let chunkHoursFee = 0;
-    let hours = Math.ceil(Math.abs(car.timeEntry - car.timeExit) / 36e5);
+    let hours = Math.ceil(
+      Math.abs(car.car.timeEntry - car.car.timeExit) / 36e5
+    );
 
     if (hours <= 3) {
       return totalFee;
@@ -110,7 +127,7 @@ export default class ParkingService {
       return totalFee;
     }
 
-    let fee = this.computeFeeByParkingSlot(hours - 3);
+    let fee = this.computeFeeByParkingSlot(hours - 3, slotSize);
     totalFee += fee;
     return totalFee;
   };
@@ -153,10 +170,10 @@ export default class ParkingService {
   };
 
   //gets available car slots for car currently entering
-  getAvailableCarSlots = (entryPoint) => {
+  getAvailableCarSlots = (entryPoint, carSize) => {
     return parking
       .filter((slot) => {
-        return !slot.isOccupied;
+        return this.doesCarFit(carSize, slot.parkingType) && !slot.isOccupied;
       })
       .map((slot) => {
         return {
@@ -201,19 +218,17 @@ export default class ParkingService {
         (x) => x.slotId === availableCarSlots[i].slotId
       );
       if (parkingSlotIndex > 0) {
-        if (this.doesCarFit(carSize, availableCarSlots[i].parkingType)) {
-          car.slotSize = availableCarSlots[i].parkingType;
-          car.slotId = availableCarSlots[i].slotId;
+        car.slotSize = availableCarSlots[i].parkingType;
+        car.slotId = availableCarSlots[i].slotId;
 
-          parking[parkingSlotIndex].car = car;
-          parking[parkingSlotIndex].isOccupied = true;
+        parking[parkingSlotIndex].car = car;
+        parking[parkingSlotIndex].isOccupied = true;
 
-          //fields below are only added for easier visualization of list in console.table
-          parking[parkingSlotIndex].parkedCarSize = carSize;
-          parking[parkingSlotIndex].plateNumber = car.plateNumber;
-          parking[parkingSlotIndex].entryPoint = entryPoint;
-          break;
-        }
+        //fields below are only added for easier visualization of list in console.table
+        parking[parkingSlotIndex].parkedCarSize = carSize;
+        parking[parkingSlotIndex].plateNumber = car.plateNumber;
+        parking[parkingSlotIndex].entryPoint = entryPoint;
+        break;
       }
     }
   };
