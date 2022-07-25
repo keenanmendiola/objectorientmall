@@ -85,8 +85,25 @@ export default class ParkingService {
 
     if (slot !== undefined) {
       slot.car.timeExit = new Date();
-      let fee = this.computeParkingFee(slot, slot.parkingType);
+      let fee = 0;
+
+      let departedCar = carsDeparted.find(
+        (car) => car.plateNumber === slot.car.plateNumber
+      );
+
+      if (
+        departedCar !== undefined &&
+        Math.ceil(departedCar.timeExit - slot.car.timeExit / 36e5) <= 1
+      ) {
+        fee =
+          departedCar.parkingFee +
+          this.computeFeeByParkingSlot(hours, slot.parkingType);
+      } else {
+        fee = this.computeParkingFee(slot.car, slot.parkingType);
+      }
+
       console.log("Car fee", fee);
+      slot.car.parkingFee = fee;
       carsDeparted.push(slot.car);
 
       //empty the parking slot
@@ -108,9 +125,7 @@ export default class ParkingService {
     let chunkHours = 0;
     let remainderChunkHours = 0;
     let chunkHoursFee = 0;
-    let hours = Math.ceil(
-      Math.abs(car.car.timeEntry - car.car.timeExit) / 36e5
-    );
+    let hours = Math.ceil(Math.abs(car.timeEntry - car.timeExit) / 36e5);
 
     if (hours <= 3) {
       return totalFee;
@@ -198,6 +213,8 @@ export default class ParkingService {
     let departedCar = this.getPreviouslyParkedCarDetails(plateNumber);
 
     if (departedCar !== undefined) {
+      departedCar.timeEntry = new Date();
+      departedCar.entryPoint = entryPoint;
       this.assignCarToSlot(availableCarSlots, departedCar, carSize, entryPoint);
     } else {
       let car = {
@@ -206,6 +223,7 @@ export default class ParkingService {
         timeEntry: new Date(),
         timeExit: 0,
         entryPoint,
+        parkingFee: 0,
       };
       this.assignCarToSlot(availableCarSlots, car, carSize, entryPoint);
     }
